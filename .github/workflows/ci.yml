@@ -1,0 +1,85 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Run pre-commit
+        # The same hooks contributors run locally: ruff check, ruff format, hygiene.
+        run: uvx pre-commit run --all-files --show-diff-on-failure
+
+  test:
+    # This tool is AppKit and AVFoundation all the way down, so the tests only mean
+    # anything on a real macOS runner.
+    runs-on: macos-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.12", "3.13", "3.14"]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install ffmpeg
+        # Needed both as the fallback decoder and to generate the test videos.
+        run: brew install ffmpeg
+
+      - name: Install the project
+        run: uv sync --locked --dev
+
+      - name: Run tests
+        run: uv run pytest -v
+
+      - name: Check the command actually runs
+        run: |
+          uv run finder-adjust-thumbnails --help
+          mkdir -p smoke
+          ffmpeg -hide_banner -loglevel error -f lavfi \
+            -i "testsrc=duration=2:size=640x360:rate=10" -pix_fmt yuv420p smoke/clip.mp4
+          uv run finder-adjust-thumbnails smoke --offset 50%
+          xattr smoke/clip.mp4 | grep -q com.apple.FinderInfo
+          uv run finder-adjust-thumbnails smoke --clear
+
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Build distributions
+        run: uv build
+
+      - name: Check metadata
+        run: uvx twine check dist/*
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: distributions
+          path: dist/
