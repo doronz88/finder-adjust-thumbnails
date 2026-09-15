@@ -76,7 +76,7 @@ def test_parse_extensions_normalises_separators_dots_and_case():
 def test_collect_videos_accepts_a_single_file(tmp_path):
     make_files(tmp_path, "a.mp4", "b.mp4")
 
-    found = collect_videos(tmp_path / "a.mp4", DEFAULT_EXTENSIONS, recursive=False)
+    found = collect_videos([tmp_path / "a.mp4"], DEFAULT_EXTENSIONS, recursive=False)
 
     assert [p.name for p in found] == ["a.mp4"]
 
@@ -84,7 +84,7 @@ def test_collect_videos_accepts_a_single_file(tmp_path):
 def test_an_explicitly_named_file_is_used_whatever_its_extension(tmp_path):
     make_files(tmp_path, "clip.weird")
 
-    found = collect_videos(tmp_path / "clip.weird", DEFAULT_EXTENSIONS, recursive=False)
+    found = collect_videos([tmp_path / "clip.weird"], DEFAULT_EXTENSIONS, recursive=False)
 
     assert [p.name for p in found] == ["clip.weird"]
 
@@ -92,7 +92,7 @@ def test_an_explicitly_named_file_is_used_whatever_its_extension(tmp_path):
 def test_collect_videos_on_a_directory_searches_it(tmp_path):
     make_files(tmp_path, "a.mp4", "notes.txt")
 
-    found = collect_videos(tmp_path, DEFAULT_EXTENSIONS, recursive=False)
+    found = collect_videos([tmp_path], DEFAULT_EXTENSIONS, recursive=False)
 
     assert [p.name for p in found] == ["a.mp4"]
 
@@ -103,3 +103,33 @@ def test_wmv_is_recognised_by_default(tmp_path):
     assert [p.name for p in find_videos(tmp_path, DEFAULT_EXTENSIONS, recursive=False)] == [
         "movie.wmv"
     ]
+
+
+def test_collect_videos_accepts_several_targets(tmp_path):
+    make_files(tmp_path, "a.mp4", "b.mp4", "c.mp4")
+
+    found = collect_videos(
+        [tmp_path / "a.mp4", tmp_path / "c.mp4"], DEFAULT_EXTENSIONS, recursive=False
+    )
+
+    assert [p.name for p in found] == ["a.mp4", "c.mp4"]
+
+
+def test_a_directory_and_a_file_can_be_mixed(tmp_path):
+    make_files(tmp_path, "dir/a.mp4", "loose.mp4")
+
+    found = collect_videos(
+        [tmp_path / "dir", tmp_path / "loose.mp4"], DEFAULT_EXTENSIONS, recursive=False
+    )
+
+    assert [p.name for p in found] == ["a.mp4", "loose.mp4"]
+
+
+def test_the_same_video_reached_twice_is_only_listed_once(tmp_path):
+    make_files(tmp_path, "a.mp4")
+
+    found = collect_videos(
+        [tmp_path, tmp_path / "a.mp4", tmp_path / "a.mp4"], DEFAULT_EXTENSIONS, recursive=False
+    )
+
+    assert [p.name for p in found] == ["a.mp4"]

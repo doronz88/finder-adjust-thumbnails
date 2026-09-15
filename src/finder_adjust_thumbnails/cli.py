@@ -27,15 +27,15 @@ app = typer.Typer(
 
 @app.command()
 def main(
-    target: Annotated[
-        Path,
+    targets: Annotated[
+        list[Path],
         typer.Argument(
             exists=True,
             file_okay=True,
             dir_okay=True,
             readable=True,
-            metavar="TARGET",
-            help="A directory of videos, or a single video file.",
+            metavar="TARGET...",
+            help="Directories of videos, or video files. Shell globs such as *.mp4 work.",
         ),
     ],
     offset: Annotated[
@@ -78,18 +78,18 @@ def main(
         int, typer.Option("--jobs", "-j", min=1, help="Number of videos to process in parallel.")
     ] = min(8, os.cpu_count() or 4),
 ) -> None:
-    """Adjust the Finder thumbnails of the videos in TARGET."""
+    """Adjust the Finder thumbnails of the given videos."""
     wanted_offset = _resolve_mode(offset, clear=clear)
 
-    videos = collect_videos(target, parse_extensions(extensions), recursive=recursive)
+    videos = collect_videos(targets, parse_extensions(extensions), recursive=recursive)
     if not videos:
-        typer.echo(f"No videos found in {target}")
+        typer.echo(f"No videos found in {', '.join(str(target) for target in targets)}")
         raise typer.Exit(0)
 
     results = run_batch(
         videos, offset=wanted_offset, dry_run=dry_run, jobs=jobs, icon_size=icon_size
     )
-    _report(results, target if target.is_dir() else target.parent)
+    _report(results, _display_base(videos))
 
     if not dry_run:
         _nudge_finder(results)
@@ -110,6 +110,12 @@ def _resolve_mode(offset: str | None, *, clear: bool) -> Offset | None:
         return parse_offset(offset or "")
     except InvalidOffsetError as error:
         raise typer.BadParameter(str(error)) from error
+
+
+def _display_base(videos: list[Path]) -> Path:
+    """The directory names are shown relative to, so reports stay readable."""
+    base = Path(os.path.commonpath([str(video) for video in videos]))
+    return base if base.is_dir() else base.parent
 
 
 def _report(results: list[FileResult], base: Path) -> None:

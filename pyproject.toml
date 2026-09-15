@@ -1,6 +1,6 @@
 [project]
 name = "finder-adjust-thumbnails"
-version = "0.1.0"
+version = "0.1.1"
 description = "Set macOS Finder video thumbnails to a frame at a chosen offset"
 readme = "README.md"
 requires-python = ">=3.12"

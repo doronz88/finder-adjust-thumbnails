@@ -27,12 +27,20 @@ def find_videos(directory: Path, extensions: Iterable[str], *, recursive: bool) 
     )
 
 
-def collect_videos(target: Path, extensions: Iterable[str], *, recursive: bool) -> list[Path]:
-    """Return the videos to process, from either a single file or a directory.
+def collect_videos(
+    targets: Iterable[Path], extensions: Iterable[str], *, recursive: bool
+) -> list[Path]:
+    """Return the videos to process, from any mix of files and directories.
 
     A file named explicitly is always used, whatever its extension — naming it is a
-    clearer statement of intent than the extension filter.
+    clearer statement of intent than the extension filter. A video reached more than
+    once, as a shell glob overlapping a directory will do, is only returned once.
     """
-    if target.is_file():
-        return [target]
-    return find_videos(target, extensions, recursive=recursive)
+    found: dict[Path, None] = {}
+    for target in targets:
+        if target.is_file():
+            found[target.resolve()] = None
+        else:
+            for video in find_videos(target, extensions, recursive=recursive):
+                found[video.resolve()] = None
+    return list(found)

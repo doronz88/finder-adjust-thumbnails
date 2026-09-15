@@ -198,3 +198,49 @@ def test_an_absurd_icon_size_is_rejected(library):
     assert result.exit_code == 2
     assert "range" in result.output.lower()
     assert not has_custom_icon(library / "one.mp4")
+
+
+def test_several_files_can_be_given_at_once(library):
+    """A shell glob such as *.mp4 arrives as many arguments, and all of them count."""
+    result = runner.invoke(
+        app, [str(library / "one.mp4"), str(library / "two.mov"), "--offset", "2"]
+    )
+
+    assert result.exit_code == 0
+    assert has_custom_icon(library / "one.mp4")
+    assert has_custom_icon(library / "two.mov")
+
+
+def test_a_directory_and_a_file_can_be_mixed(library):
+    result = runner.invoke(app, [str(library / "sub"), str(library / "one.mp4"), "--offset", "2"])
+
+    assert result.exit_code == 0
+    assert has_custom_icon(library / "sub" / "three.mp4")
+    assert has_custom_icon(library / "one.mp4")
+
+
+def test_a_file_named_twice_is_only_reported_once(library):
+    result = runner.invoke(
+        app, [str(library / "one.mp4"), str(library / "one.mp4"), "--offset", "2"]
+    )
+
+    assert result.exit_code == 0
+    assert result.output.count("one.mp4") == 1
+
+
+def test_a_missing_path_among_the_targets_is_rejected(library, tmp_path):
+    result = runner.invoke(
+        app, [str(library / "one.mp4"), str(tmp_path / "nope.mp4"), "--offset", "2"]
+    )
+
+    assert result.exit_code == 2
+
+
+def test_several_files_are_reported_by_name(library):
+    result = runner.invoke(
+        app, [str(library / "one.mp4"), str(library / "two.mov"), "--offset", "2"]
+    )
+
+    assert "one.mp4" in result.output
+    assert "two.mov" in result.output
+    assert "2 file(s)" in result.output

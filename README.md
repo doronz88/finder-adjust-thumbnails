@@ -46,6 +46,10 @@ finder-adjust-thumbnails ~/Movies --recursive --offset 1:30
 # a single file
 finder-adjust-thumbnails ~/Movies/holiday.mp4 --offset 10
 
+# a shell glob, or any mix of files and directories
+finder-adjust-thumbnails *.wmv --offset 10
+finder-adjust-thumbnails ~/Movies ~/Desktop/clip.mp4 --offset 10
+
 # see what would happen, change nothing
 finder-adjust-thumbnails ~/Movies --offset 25% --dry-run
 
@@ -76,7 +80,9 @@ across clips of very different lengths.
 | `--dry-run` | off | report without changing anything |
 | `--jobs`, `-j` | up to 8 | videos to decode in parallel |
 
-A file named explicitly is always processed, whatever its extension.
+Any mix of files and directories can be given at once, so shell globs work as you
+would expect. A file named explicitly is always processed, whatever its extension, and
+a video reached twice — by a glob overlapping a directory, say — is only done once.
 
 Exit status is `0` on success, `1` if any file failed, `2` for bad arguments.
 
